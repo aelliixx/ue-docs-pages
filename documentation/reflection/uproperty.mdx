@@ -1,0 +1,45 @@
+---
+title: UPROPERTY()
+subtitle: Property Specifiers
+---
+
+<Note type="Disclaimer">
+    This page is still a work in progress. Some specifiers may not be included or are
+    inaccurate.
+</Note>
+
+## Syntax
+
+```cpp
+UPROPERTY([specifier, specifier, ...], [meta(key=value, key=value, ...)])
+Type VariableName;
+```
+
+<Note type="Note">
+    - Tags are case insensitive
+</Note>
+
+<Block>
+    <Specifier type="UPROPERTY" name="VisibleEverywhere"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["VisibleDefaultsOnly", "VisibleDefaultsOnly",
+            "VisibleInstanceOnly",
+            "EditAnywhere",
+            "EditDefaultsOnly",
+            "EditInstanceOnly"]
+    } related={[]}/>
+
+    Properties marked with `VisibleAnywhere` are visible in the both Details Panel of Blueprint assets and the Details
+    Panel
+    of Blueprint instances within maps. Note that this refers to being visible in the Details Panel, not visible in the
+    Blueprint Graph. For that you need to use BlueprintReadOnly.
+</Block>
+<Block>
+    <Specifier type="UPROPERTY" name="VisibleDefaultsOnly"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={[]} related={[]}/>
+
+    Properties marked with `VisibleAnywhere` are visible in the both Details Panel of Blueprint assets and the Details
+    Panel
+    of Blueprint instances within maps. Note that this refers to being visible in the Details Panel, not visible in the
+    Blueprint Graph. For that you need to use BlueprintReadOnly.
+</Block>
