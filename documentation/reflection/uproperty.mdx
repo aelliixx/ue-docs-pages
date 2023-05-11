@@ -1,12 +1,30 @@
 ---
 title: UPROPERTY()
 subtitle: Property Specifiers
+header: Runtime/CoreUObject/Public/UObject/ObjectMacros.h
+tags: Property Specifiers, Attributes, Reflection
 ---
 
 <Note type="Disclaimer">
     This page is still a work in progress. Some specifiers may not be included or are
     inaccurate.
 </Note>
+
+Unreal Engine property specifiers define how properties behave within engine and editor contexts. They are similar
+to Unity Engine's (or more accurately C#'s) attributes in that they introduce a static-reflection-like behaviour to C++.
+Specifiers allow you to define various attributes of the property, such as how the property should be serialised,
+replicated across a network, or displayed in the editor.
+
+Official Unreal Engine documentation provides a decent list of property specifiers, but not a complete one, missing
+important attributes and lacking implementation details. This page is an attempt to provide clear implementation examples,
+and descriptions for the various attributes.
+
+If you're looking for an exhaustive and detailed list of property specifiers, check out [Ben ui](https://benui.ca/unreal/uproperty)'s
+which also provides great usage examples.
+
+The following specifiers are categorised according to their relevant editor context and are listed roughly in the order
+of most to least often used.
+
 
 ## Syntax
 
@@ -15,31 +33,155 @@ UPROPERTY([specifier, specifier, ...], [meta(key=value, key=value, ...)])
 Type VariableName;
 ```
 
-<Note type="Note">
-    - Tags are case insensitive
-</Note>
+## Examples
+```cpp
+UCLASS()
+class USomeClass : public UObject
+{
+// ...
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Character", meta=(AllowPrivateAccess=true))
+    int32 Score;
+// ...
+}
+```
+The above code defines an `int32` variable `Score`. The UPROPERTY specifier allows `Score` value to be edited anywhere - both
+in the details panel in a blueprint or the instance of said blueprint in the map; allows blueprints to read (get) or write
+(set) its value. It also sets its category to Character, therefore the input field for this variable in the details panel
+will be under Character.
+
+The meta attribute `AllowPrivateAccess` being set to true allows blueprints to access the property
+even when it is defined in a private block; omitting it would result in a compile time error and would require us to define
+the Score property publicly.
+
+![Image depicts a blueprint graph and class defaults details panel next to each other. The graph contains a single node -
+getter for 'Score' property, and likewise, the details panel shows a read-only 'Score' numeric input field.](images/uproperty_example.png)
+
+## Editor Specifiers
 
 <Block>
-    <Specifier type="UPROPERTY" name="VisibleEverywhere"/>
+    <Specifier type="UPROPERTY" name="VisibleAnywhere"/>
     <SpecifierMeta position="Specifier" type="Flag" incompatible={
-        ["VisibleDefaultsOnly", "VisibleDefaultsOnly",
+        ["VisibleDefaultsOnly",
             "VisibleInstanceOnly",
             "EditAnywhere",
             "EditDefaultsOnly",
             "EditInstanceOnly"]
-    } related={[]}/>
+    } related={["BlueprintReadOnly"]}/>
+    Makes the property visible to both class defaults detail panel in blueprint assets (archetypes) and the blueprint
+    instances in maps (instances), *but not editable in either*.
 
-    Properties marked with `VisibleAnywhere` are visible in the both Details Panel of Blueprint assets and the Details
-    Panel
-    of Blueprint instances within maps. Note that this refers to being visible in the Details Panel, not visible in the
-    Blueprint Graph. For that you need to use BlueprintReadOnly.
+    This is useful when you want to quickly look up the value of a property in a blueprint or an instance thereof,
+    but don't want blueprint users modify it.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
 </Block>
 <Block>
     <Specifier type="UPROPERTY" name="VisibleDefaultsOnly"/>
-    <SpecifierMeta position="Specifier" type="Flag" incompatible={[]} related={[]}/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["VisibleAnywhere",
+            "VisibleInstanceOnly",
+            "EditAnywhere",
+            "EditDefaultsOnly",
+            "EditInstanceOnly"]
+    } related={["BlueprintReadOnly"]}/>
+    Makes the property visible only to the class defaults detail panel in blueprint assets (archetypes).
 
-    Properties marked with `VisibleAnywhere` are visible in the both Details Panel of Blueprint assets and the Details
-    Panel
-    of Blueprint instances within maps. Note that this refers to being visible in the Details Panel, not visible in the
-    Blueprint Graph. For that you need to use BlueprintReadOnly.
+    Similarly to `VisibleAnywhere` this is useful when you wish to expose a read-only value to the blueprints,
+    but don't want blueprint users modify it.
+
+    Much like the `EditDefaultsOnly`, the word "Defaults" refers to the "Class Defaults" details panel within the
+    blueprint asset.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
+</Block>
+<Block>
+    <Specifier type="UPROPERTY" name="VisibleInstanceOnly"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["VisibleAnywhere",
+            "VisibleDefaultsOnly",
+            "EditAnywhere",
+            "EditDefaultsOnly",
+            "EditInstanceOnly"]
+    } related={[]}/>
+    Makes the property visible only to the details panel of blueprint instances within a map (instances).
+
+    Can be useful to expose a quick look up to a value which changes at runtime but should not be modified by the blueprint
+    users and is not useful to know in the class defaults panel. For example, `currentHealth` which can change at runtime
+    as a result of received damage but isn't very useful in class defaults when the game is not running.
+
+    Much like the `EditInstanceOnly`, the word "Instance" refers to the specific instance of a blueprint placed in a
+    map. To view its details, select the actor in the world outliner.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
+</Block>
+
+
+
+<Block>
+    <Specifier type="UPROPERTY" name="EditAnywhere"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["EditDefaultsOnly",
+            "EditInstanceOnly",
+            "VisibleAnywhere",
+            "VisibleDefaultsOnly",
+            "VisibleInstanceOnly"]
+    } related={["BlueprintReadWrite"]}/>
+    Makes the property editable in class defaults details panel in blueprint assets (archetypes) as well as
+    instances of the blueprint in maps (instances). It is similar to `VisibleAnywhere` but it also allows for changing
+    the value.
+
+    Useful when you want blueprint users to tweak the default value without going into C++ and each instance may have
+    a unique value.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
+</Block>
+<Block>
+    <Specifier type="UPROPERTY" name="EditDefaultsOnly"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["EditAnywhere",
+            "EditInstanceOnly",
+            "VisibleAnywhere",
+            "VisibleDefaultsOnly",
+            "VisibleInstanceOnly"]
+    } related={["BlueprintReadWrite"]}/>
+    Makes the property editable only in class defaults details panel in blueprint assets. It is similar to
+    `VisibleDefaultsOnly` but it also allows for changing the value.
+
+    Useful when you want to allow blueprint users to tweak the default value but all instances must have the same value.
+
+    Much like the `VisibleDefaultsOnly`, the word "Defaults" refers to the "Class Defaults" details panel within the
+    blueprint asset.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
+</Block>
+<Block>
+    <Specifier type="UPROPERTY" name="EditInstanceOnly"/>
+    <SpecifierMeta position="Specifier" type="Flag" incompatible={
+        ["EditAnywhere",
+            "EditDefaultsOnly",
+            "VisibleAnywhere",
+            "VisibleDefaultsOnly",
+            "VisibleInstanceOnly"]
+    } related={[]}/>
+    Makes the property editable only in the details panel of blueprint instances within a map (instances).
+
+    Useful when you want a C++ defined default value, but allow blueprint users to manually change it for each instance.
+
+    Much like the `ViewInstanceOnly`, the word "Instance" refers to the specific instance of a blueprint placed in a
+    map. To view and edit its details, select the actor in the world outliner.
+
+    Note that while the details panels expose the property as read-write, it is not exposed to blueprint graphs.
+    To do so, take a look at the Blueprint section of this page for `BlueprintReadOnly` and `BlueprintReadWrite`
+    specifiers.
 </Block>
